@@ -8,19 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
-
-var test struct {
-	Name   string
-	code   int
-	stdout string
-	stderr string
-}
 
 func execScript(path string) (code int, stdout string, stderr string, err error) {
 	cmd := exec.Command(os.Getenv("SHELL"), path)
@@ -52,8 +46,40 @@ func execScript(path string) (code int, stdout string, stderr string, err error)
 	return code, out.String(), stderr, nil
 }
 
+type Test struct {
+	Name   string
+	Code   int
+	Stdout string
+	Stderr string
+}
+
+type Response struct {
+	Health []Test
+	Error  string
+}
+
 func healthcheck(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	var res Response
+	files, err := filepath.Glob(os.Getenv("SCRIPT_PATH"))
+	if err != nil {
+		res.Error = err.Error()
+		json.NewEncoder(w).Encode(res)
+	}
+	tests := make([]Test, len(files))
+	for i, filename := range files {
+		code, stdout, stderr, err := execScript(filename)
+		tests[i] = Test{
+			Name:   filename,
+			Code:   code,
+			Stdout: stdout,
+			Stderr: stderr,
+		}
+		if err != nil {
+			res.Error = err.Error()
+		}
+	}
+	res.Health = tests
+	json.NewEncoder(w).Encode(res)
 }
 
 func main() {
@@ -71,6 +97,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Println(srv.Addr)
+	log.Println("listening on: ", srv.Addr)
 	log.Fatal(srv.ListenAndServe())
 }
