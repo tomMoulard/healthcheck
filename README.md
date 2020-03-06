@@ -53,3 +53,8 @@ By default, the output shall have an error field which is empty if there is no e
 All the configuration you need is inside the `.env` file.
 
 Some sample(and usefull) scripts are provided in the `scripts_template` folder.
+
+## Authors
+
+ - [Tom Moulard](mailto:tom@moulard.org)
+ - [Sebastien Goubeau](mailto:sebastien.goubeau@epita.fr)
